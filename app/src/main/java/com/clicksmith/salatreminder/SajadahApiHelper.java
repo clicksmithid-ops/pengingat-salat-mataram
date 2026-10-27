@@ -93,9 +93,11 @@ public final class SajadahApiHelper {
             return null;
 
         } catch (IOException e) {
-            Log.e(TAG, "IO Error fetching regions", e);
+            Log.e(TAG, "IO Error fetching data", e);
+            return null;
         } catch (JSONException e) {
-            Log.e(TAG, "JSON parse error in regions", e);
+            Log.e(TAG, "JSON parse error in data", e);
+            return null;
         }
         return null;
     }
@@ -189,6 +191,35 @@ public final class SajadahApiHelper {
         }
     }
 
+    /**
+     * Get last update timestamp string for display
+     * Checks both timestamp and stored year with date validation
+     */
+    private static String getLastUpdateString(Context context) {
+        SharedPreferences prefs = context.getSharedPreferences("sajadah_schedule", Context.MODE_PRIVATE);
+        long lastFetch = prefs.getLong("sajadah_last_fetch", 0);
+        int storedYear = prefs.getInt("sajadah_year", 0);
+        int currentYear = new GregorianCalendar().get(Calendar.YEAR);
+
+        // Check if data is from current year AND was fetched recently (within 24 hours)
+        if (storedYear != currentYear || lastFetch == 0) {
+            return "data tidak valid";
+        }
+
+        long now = System.currentTimeMillis();
+        long diff = now - lastFetch;
+        // Data valid jika diambil dalam 24 jam terakhir
+        if (diff < 86400000) {
+            return String.format(Locale.getDefault(), "%d menit lalu", diff / 60000);
+        } else if (diff < 86400000 * 7) {
+            return String.format(Locale.getDefault(), "%d hari lalu", diff / (86400000 / 7));
+        } else {
+            return "lebih dari 1 minggu ago";
+        }
+    }
+
+    /**
+     * Fetch schedule data using OkHttp
     /**
      * Fetch schedule data using OkHttp
      */
