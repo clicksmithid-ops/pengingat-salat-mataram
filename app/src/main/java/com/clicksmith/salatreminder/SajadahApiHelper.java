@@ -1,5 +1,6 @@
 package com.clicksmith.salatreminder;
 
+import java.util.Locale;
 import android.content.Context;
 import android.content.SharedPreferences;
 import android.util.Log;

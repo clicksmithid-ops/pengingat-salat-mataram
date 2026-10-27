@@ -57,8 +57,3 @@ public final class ScheduleStore {
     public static SharedPreferences sajadahPrefs(Context c) {
         return c.getSharedPreferences(SAJADAH_PREF, Context.MODE_PRIVATE);
     }
-
-    /**
-     * Get the keys array (original format)
-     */
-    
