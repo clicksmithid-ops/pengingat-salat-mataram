@@ -61,6 +61,4 @@ public final class ScheduleStore {
     /**
      * Get the keys array (original format)
      */
-    public static String[] keys() {
-        return KEYS.clone();
-    }
+    
