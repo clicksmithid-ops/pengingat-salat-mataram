@@ -107,7 +107,7 @@ public final class SajadahApiHelper {
      * @param year     year (e.g., 2026)
      * @return JSONObject containing schedule data, or null on failure
      */
-    public static JSONObject fetchSchedule(String regionId, int year) {
+    public static JSONObject fetchSchedule(String regionId, int year, Context context) {
         try {
             String url = TIMES_URL_PREFIX + regionId + "/" + year + ".json";
             String json = fetch(url);
@@ -137,9 +137,11 @@ public final class SajadahApiHelper {
             return response;
 
         } catch (IOException e) {
-            Log.e(TAG, "IO Error fetching schedule", e);
+            Log.e(TAG, "IO Error fetching schedule, will retry later", e);
+            return null;
         } catch (JSONException e) {
             Log.e(TAG, "JSON parse error in schedule", e);
+            return null;
         }
         return null;
     }

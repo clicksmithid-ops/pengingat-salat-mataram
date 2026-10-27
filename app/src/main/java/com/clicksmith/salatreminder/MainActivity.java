@@ -2,9 +2,12 @@ package com.clicksmith.salatreminder;
 
 import android.app.Activity;
 import android.app.AlertDialog;
+import android.content.Context;
 import android.content.Intent;
 import android.net.Uri;
 import android.os.Bundle;
+import android.os.Handler;
+import android.os.Looper;
 import android.provider.Settings;
 import android.view.Gravity;
 import android.view.View;
@@ -46,10 +49,12 @@ public class MainActivity extends Activity {
         status.setTextColor(0xFFFFD166);
         root.addView(status);
 
-        // Auto-fetch schedule from Sajadah API
-        sajadahHelper.fetchAndFindMataramRegion(this);
-        boolean hasSchedule = sajadahHelper.hasValidCachedSchedule(this);
-        updateScheduleDisplay(hasSchedule);
+        // Auto-fetch schedule from Sajadah API on startup (background via handler)
+        new Handler(Looper.getMainLooper()).post(() -> {
+            sajadahHelper.fetchAndFindMataramRegion(MainActivity.this);
+            boolean hasSchedule = sajadahHelper.hasValidCachedSchedule(MainActivity.this);
+            updateScheduleDisplay(hasSchedule);
+        });
 
         // Buttons
         addButton(root, "Atur izin popup", v -> {
@@ -93,22 +98,37 @@ public class MainActivity extends Activity {
             AlarmScheduler.cancel(this);
             status.setText("Pengingat dinonaktifkan.");
         });
+        addButton(root, "Perbarui Jadwal", v -> updateScheduleFromSajadah());
         setContentView(root);
         updateStatus();
     }
 
+    // Background network task - run on separate thread to avoid blocking UI
+    private void updateScheduleFromSajadah() {
+        new Thread(() -> {
+            boolean success = sajadahHelper.fetchSchedule("kota-mataram", 2026, MainActivity.this);
+            runOnUiThread(() -> {
+                boolean hasSchedule = sajadahHelper.hasValidCachedSchedule(MainActivity.this);
+                updateScheduleDisplay(hasSchedule);
+                status.setText("Pembaruan jadwal " + (success ? "sukses" : "gagal") + " dari Sajadah API");
+            });
+        }).start();
+    }
+
     private void updateScheduleDisplay(boolean hasCached) {
         if (hasCached) {
-            scheduleInfo.setText("✅ Jadwal tersedia dari cache lokal");
+            scheduleInfo.setText("✅ Jadwal tersedia dari cache Sajadah (Asia/Makassar)");
         } else {
             scheduleInfo.setText("⚠️ Tidak ada jadwal cached. Tekan 'Perbarui Jadwal' untuk mengambil dari Sajadah.");
         }
     }
 
     private void updateStatus() {
-        status.setText("Izin popup: " + (Settings.canDrawOverlays(this) ? "aktif" : "belum aktif")
-                + "
-Jadwal tersimpan: " + (ScheduleStore.hasAnySchedule(this) ? "ada" : "belum ada"));
+        String lastUpdate = sajadahHelper.getLastUpdateString(this);
+        scheduleInfo.setText("Izin popup: " + (Settings.canDrawOverlays(this) ? "aktif" : "belum aktif")
+                + "\nJadwal tersimpan: " + (ScheduleStore.hasAnySchedule(this) ? "ada" : "belum ada")
+                + "\nSumber: " + (sajadahHelper.hasValidCachedSchedule(this) ? "Sajadah API" : "Manual")
+                + "\nTerakhir update: " + lastUpdate);
     }
 
     private void addButton(LinearLayout root, String label, View.OnClickListener listener) {
@@ -122,7 +142,7 @@ Jadwal tersimpan: " + (ScheduleStore.hasAnySchedule(this) ? "ada" : "belum ada")
     private void editSchedule() {
         final String[] names = {"Subuh", "Zuhur", "Asar", "Magrib", "Isya"};
         final String[] keys = {"fajr", "dhuhr", "asr", "maghrib", "isha"};
-        StringBuilder msg = new StringBuilder("Isi jadwal pada format 24 jam (HH:mm) satu per satu. Gunakan jadwal resmi untuk kabupaten/kota Anda.");
+        StringBuilder msg = new StringBuilder("Isi jadwal salat pada format 24 jam (HH:mm) satu per satu. Gunakan jadwal resmi untuk kabupaten/kota Anda.");
         new AlertDialog.Builder(this).setTitle("Jadwal salat")
             .setItems(names, (d, which) -> {
                 android.widget.EditText input = new android.widget.EditText(this);
