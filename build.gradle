@@ -1,3 +1,6 @@
 plugins {
     id 'com.android.application' version '8.7.3' apply false
 }
+
+
+implementation 'com.squareup.okhttp3:okhttp:4.12.0'
